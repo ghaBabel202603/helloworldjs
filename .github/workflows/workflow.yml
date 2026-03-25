@@ -1,23 +1,36 @@
-name: Deploy React APp
+name: Deploy React App
 
 on:
-  workflow_call:     
-  workflow_dispatch: 
+  push:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
 
 jobs:
-  detect-environment:
-    uses: ./.github/workflows/detectEnvWF.yml
-    with:
-      branch: ${{github.ref}}    
-  
-  build:
-    uses: ./.github/workflows/buildWF.yml
-    with:
-      base_path: "."
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
-  deploy:
-   needs: [build,detect-environment]
-   uses: ./.github/workflows/deployWF.yml
-   with:
-     env: ${{needs.detect-environment.outputs.environment}}
-     artifact_name: ${{needs.build.outputs.artifact_name}}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Detect environment
+        id: env
+        uses: ghaBabel202603/public-actions/detect-environment@v1
+        with:
+          branch: ${{ github.ref }}
+
+      - name: Build app
+        id: build
+        uses: ghaBabel202603/public-actions/build-node-app@v1
+        with:
+          base_path: .
+
+      - name: Deploy app
+        uses: ghaBabel202603/public-actions/deploy-gh-pages@v1
+        with:
+          environment: ${{ steps.env.outputs.environment }}
+          artifact_name: ${{ steps.build.outputs.artifact_name }}
